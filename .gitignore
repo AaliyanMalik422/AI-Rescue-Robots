@@ -1,0 +1,18 @@
+# Build products
+/build/
+/bin/
+*.o
+*.d
+*.exe
+*.out
+
+# IDE and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*~
