@@ -1,0 +1,9 @@
+ai_rescue_robots
+core_tests
+output/*
+!output/.gitkeep
+*.o
+
+# Compiled files
+/ai_rescue_robots
+/core_tests
