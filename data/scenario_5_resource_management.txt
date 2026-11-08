@@ -1,0 +1,69 @@
+# Custom scenario 5: resource and charging checks
+# Small scenario focused on battery reserve, station outages and robot availability.
+SCENARIO custom_resource_management
+PARAM max_steps 120
+PARAM speed 1
+PARAM battery_per_cost_unit 1
+PARAM battery_per_work_step 2
+PARAM recharge_per_step 5
+
+LOCATIONS 12
+1 Command_1 COMMAND
+2 Junction_1 JUNCTION
+3 Building_1 BUILDING
+4 Charging_Station_1 CHARGING
+5 Hospital_1 HOSPITAL
+6 Supply_Depot_1 DEPOT
+7 Building_2 BUILDING
+8 Junction_2 JUNCTION
+9 Charging_Station_2 CHARGING
+10 Building_3 BUILDING
+11 Junction_3 JUNCTION
+12 Building_4 BUILDING
+
+CONNECTIONS 17
+1 1 2 3 OPEN
+2 2 3 4 OPEN
+3 3 4 2 OPEN
+4 2 5 5 OPEN
+5 5 6 3 OPEN
+6 6 7 4 OPEN
+7 7 8 2 OPEN
+8 8 9 3 OPEN
+9 8 10 5 OPEN
+10 10 11 2 OPEN
+11 11 12 4 OPEN
+12 1 6 7 OPEN
+13 3 7 3 OPEN
+14 5 8 4 OPEN
+15 4 9 6 OPEN
+16 2 11 8 BLOCKED
+17 6 10 5 OPEN
+
+ROBOTS 4
+1 1 MEDICAL 30 18
+2 6 SUPPLY 50 40
+3 5 FIRE 40 35
+4 9 GENERAL 45 28
+
+REQUESTS 8
+1 0 3 MEDICAL 4 2
+2 0 7 SUPPLY 3 3
+3 3 12 SEARCH 5 4
+4 4 5 FIRE 5 2
+5 8 10 SEARCH 2 3
+6 12 12 MEDICAL 3 2
+7 15 3 SUPPLY 1 2
+8 20 7 FIRE 4 3
+
+EVENTS 9
+10 STATION_DOWN 4
+15 ROBOT_OFFLINE 1
+20 BLOCK 13
+25 UNBLOCK 13
+30 SET_URGENCY 7 5
+40 ROBOT_ONLINE 1
+50 STATION_UP 4
+65 STATION_DOWN 9
+75 STATION_UP 9
+END

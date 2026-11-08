@@ -1,0 +1,50 @@
+# AI Rescue Robots - Data Structures Lab Fall 2026
+# Full-line comments and blank lines are ignored. Tokens are space-separated.
+# Connections are undirected. IDs must be unique within their entity type.
+# PARAM records are uncounted; other sections use exact record counts.
+SCENARIO custom_basic
+PARAM max_steps 60
+PARAM speed 1
+PARAM battery_per_cost_unit 1
+PARAM battery_per_work_step 2
+PARAM recharge_per_step 5
+
+LOCATIONS 8
+1 Command_Center COMMAND
+2 Junction_A JUNCTION
+3 Building_A BUILDING
+4 Hospital_A HOSPITAL
+5 Charging_A CHARGING
+6 Depot_A DEPOT
+7 Building_B BUILDING
+8 Junction_B JUNCTION
+
+CONNECTIONS 10
+1 1 2 2 OPEN
+2 2 3 3 OPEN
+3 3 4 2 OPEN
+4 2 5 4 OPEN
+5 5 6 2 OPEN
+6 6 7 3 OPEN
+7 7 8 2 OPEN
+8 8 1 7 OPEN
+9 3 7 6 OPEN
+10 4 5 3 BLOCKED
+
+ROBOTS 3
+1 1 MEDICAL 60 60
+2 6 SUPPLY 70 65
+3 8 GENERAL 65 60
+
+REQUESTS 5
+1 0 4 MEDICAL 5 2
+2 0 7 SUPPLY 3 3
+3 3 3 SEARCH 2 2
+4 8 6 SUPPLY 4 2
+5 12 8 FIRE 2 3
+
+EVENTS 2
+4 UNBLOCK 10
+15 BLOCK 9
+
+END
