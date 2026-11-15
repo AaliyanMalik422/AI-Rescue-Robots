@@ -1,142 +1,77 @@
 #include "pathfinder.hpp"
 #include "min_heap.hpp"
 
-namespace {
-const long long UNREACHABLE_COST = 9000000000000000000LL;
+// MEMBER 1: Dijkstra and its helpers. Work with location INDICES internally
+// (environment.get_location_index) and convert back to IDs only when building the route.
+// Working arrays, all sized V = environment.get_location_count():
+//   distance[i] (long long, start at UNREACHABLE_COST), previous_index[i] (-1),
+//   previous_connection[i] (-1), settled[i] (false).
 
-struct TrackerEntry {
-    int location_id;
-    long long cost;
-    int previous_location_id;
-    bool visited;
-
-    TrackerEntry()
-        : location_id(-1), cost(UNREACHABLE_COST), previous_location_id(-1), visited(false) {}
-
-    explicit TrackerEntry(int id)
-        : location_id(id), cost(UNREACHABLE_COST), previous_location_id(-1), visited(false) {}
-};
-
-int find_tracker_index(const DynamicArray<TrackerEntry>& trackers, int location_id) {
-    for (int i = 0; i < trackers.size(); ++i) {
-        if (trackers[i].location_id == location_id) return i;
-    }
-    return -1;
+PathResult find_shortest_path(const Environment& environment, int start_id, int destination_id) {
+    // TODO (Member 1)
+    // PSEUDOCODE:
+    //   result = empty PathResult
+    //   s = index of start_id, d = index of destination_id; if either is -1: return result
+    //   V = location count; fill distance/previous_*/settled; heap.reset(V)
+    //   distance[s] = 0; heap.insert_or_decrease(s, 0)
+    //   while heap not empty:
+    //       extract_min -> u (index), cost
+    //       if settled[u]: continue;  settled[u] = true
+    //       if u == d: break                                   (destination finalised)
+    //       for each node in environment.get_neighbors_at(u):
+    //           conn = environment.get_connection_at(node.connection_index)
+    //           if conn->is_blocked: continue                  (blocked roads never used)
+    //           v = node.target_location_index; if settled[v]: continue
+    //           result.edges_relaxed += 1
+    //           candidate = distance[u] + conn->distance
+    //           better = candidate < distance[v]
+    //           tie    = candidate == distance[v] and (ID of u < ID of previous_index[v]'s location,
+    //                                                  then conn->id < previous_connection[v]'s id)
+    //           if better or tie: distance[v] = candidate; previous_index[v] = u;
+    //                             previous_connection[v] = conn id;  heap.insert_or_decrease(v, candidate)
+    //   if distance[d] == UNREACHABLE_COST: return result       (exists stays false)
+    //   rebuild: walk previous_index from d back to s collecting location IDs and connection IDs,
+    //            then reverse both lists into result.route / result.connection_ids
+    //   result.total_cost = distance[d]; result.exists = true
+    //   start == destination: route has one location, no connections, cost 0
+    (void)environment; (void)start_id; (void)destination_id;
+    return PathResult();
 }
 
-int add_tracker_if_missing(DynamicArray<TrackerEntry>& trackers, int location_id) {
-    int index = find_tracker_index(trackers, location_id);
-    if (index >= 0) return index;
-
-    TrackerEntry entry(location_id);
-    if (!trackers.push_back(entry)) return -1;
-    return trackers.size() - 1;
+int compute_station_costs(const Environment& environment,
+                          DynamicArray<long long>& cost_by_location_index) {
+    // TODO (Member 1)
+    // PSEUDOCODE: same loop as above, but
+    //   * no destination and no early exit: run until the heap is empty
+    //   * initial step: for every location index i that is an operational station:
+    //         distance[i] = 0; heap.insert_or_decrease(i, 0)
+    //   * roads are undirected, so distances from the stations equal distances to them
+    //   * at the end copy distance into cost_by_location_index (resized to V)
+    //   * return the number of edges relaxed
+    (void)environment;
+    cost_by_location_index.clear();
+    return 0;
 }
+
+PathResult find_nearest_station(const Environment& environment, int start_id) {
+    // TODO (Member 1)
+    // PSEUDOCODE (simple version): best = none
+    //   for every operational station s (by ascending ID, so ties go to the lower ID):
+    //       r = find_shortest_path(environment, start_id, s.id)
+    //       if r.exists and (best is none or r.total_cost < best.total_cost): best = r
+    //   return best (exists == false if no station is reachable)
+    //   Cheaper alternative: one Dijkstra from start_id that stops at the first station it settles.
+    (void)environment; (void)start_id;
+    return PathResult();
 }
 
-PathResult Pathfinder::find_shortest_path(const Environment& environment,
-                                          int start_id,
-                                          int destination_id) {
-    PathResult result;
-
-    if (environment.get_location(start_id) == 0 ||
-        environment.get_location(destination_id) == 0) {
-        return result;
+bool route_is_open(const Environment& environment,
+                   const DynamicArray<int>& route, int from_index) {
+    // DONE (provided; uses your get_connection_between)
+    if (from_index < 0) return false;
+    for (int i = from_index; i + 1 < route.size(); ++i) {
+        const Connection* connection = environment.get_connection_between(route[i], route[i + 1]);
+        if (connection == 0 || connection->is_blocked) return false;
     }
-
-    if (start_id == destination_id) {
-        result.route.push_back(start_id);
-        result.exists = true;
-        result.total_cost = 0;
-        return result;
-    }
-
-    DynamicArray<TrackerEntry> trackers;
-    MinHeap frontier;
-
-    int start_index = add_tracker_if_missing(trackers, start_id);
-    if (start_index < 0) return result;
-    trackers[start_index].cost = 0;
-    if (!frontier.insert(PathNode(start_id, 0))) return result;
-
-    while (!frontier.empty()) {
-        PathNode current;
-        if (!frontier.extract_min(current)) break;
-
-        int current_index = find_tracker_index(trackers, current.location_id);
-        if (current_index < 0) continue;
-        if (trackers[current_index].visited) continue;
-        if (current.cost != trackers[current_index].cost) continue;
-
-        trackers[current_index].visited = true;
-        if (current.location_id == destination_id) break;
-
-        const LinkedList<NeighborNode>* neighbors = environment.get_neighbors(current.location_id);
-        if (neighbors == 0) continue;
-
-        const ListNode<NeighborNode>* neighbor_node = neighbors->get_head();
-        while (neighbor_node != 0) {
-            int neighbor_id = neighbor_node->data.target_location_id;
-            const Connection* connection = environment.get_connection(neighbor_node->data.connection_id);
-
-            if (connection != 0 && !connection->is_blocked && connection->distance > 0) {
-                long long edge_cost = connection->distance;
-                long long current_cost = trackers[current_index].cost;
-
-                // Guard the addition so an overflow cannot create a false short route.
-                if (current_cost <= UNREACHABLE_COST - edge_cost) {
-                    long long candidate_cost = current_cost + edge_cost;
-                    int neighbor_index = add_tracker_if_missing(trackers, neighbor_id);
-
-                    if (neighbor_index < 0) return result;
-
-                    if (!trackers[neighbor_index].visited &&
-                        candidate_cost < trackers[neighbor_index].cost) {
-                        trackers[neighbor_index].cost = candidate_cost;
-                        trackers[neighbor_index].previous_location_id = current.location_id;
-                        if (!frontier.insert(PathNode(neighbor_id, candidate_cost))) return result;
-                    } else if (!trackers[neighbor_index].visited &&
-                               candidate_cost == trackers[neighbor_index].cost &&
-                               (trackers[neighbor_index].previous_location_id == -1 ||
-                                current.location_id < trackers[neighbor_index].previous_location_id)) {
-                        // Deterministic predecessor tie-break for equal-cost routes.
-                        trackers[neighbor_index].previous_location_id = current.location_id;
-                    }
-                }
-            }
-
-            neighbor_node = neighbor_node->next;
-        }
-    }
-
-    int destination_index = find_tracker_index(trackers, destination_id);
-    if (destination_index < 0 || trackers[destination_index].cost == UNREACHABLE_COST) {
-        return result;
-    }
-
-    DynamicArray<int> reverse_route;
-    int location_id = destination_id;
-    bool reached_start = false;
-
-    for (int steps = 0; steps <= trackers.size(); ++steps) {
-        if (!reverse_route.push_back(location_id)) return PathResult();
-        if (location_id == start_id) {
-            reached_start = true;
-            break;
-        }
-
-        int index = find_tracker_index(trackers, location_id);
-        if (index < 0 || trackers[index].previous_location_id < 0) break;
-        location_id = trackers[index].previous_location_id;
-    }
-
-    if (!reached_start) return result;
-
-    for (int i = reverse_route.size() - 1; i >= 0; --i) {
-        if (!result.route.push_back(reverse_route[i])) return PathResult();
-    }
-
-    result.total_cost = trackers[destination_index].cost;
-    result.exists = true;
-    return result;
+    return true;
 }

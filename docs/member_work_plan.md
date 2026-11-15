@@ -1,48 +1,41 @@
-# Three-Member Work Plan
+# Work Division
 
-## Shared rule
+Internal freeze: **Tue 24 Nov**. 25-26 Nov is for emergencies only.
+Each member has three milestones. **Minimum** = must be done. **Ideal** = do it if you are on track.
 
-Agree on all shared fields, method signatures and state-transition rules before independent coding. Do not change a shared interface without informing the other members.
+Every TODO in the code has pseudocode in a comment. Things marked `DONE (provided)` are already
+written (getters, lookups, wiring, printing); you do not need to touch them.
 
-## Member 1 — Environment, Parser and Pathfinding
+## Member 1 - environment, parser, pathfinding
+Files: `id_index_map`, `environment`, `pathfinder`, `scenario_parser`
 
-Files: `environment.hpp/.cpp`, `pathfinder.hpp/.cpp`, `scenario_parser.hpp/.cpp`.
+| By | Minimum | Ideal |
+| --- | --- | --- |
+| Wed 18 Nov | `IdIndexMap.insert`, `add_location`, `add_connection`, `get_connection_between`, `is_cut_off`. Parser loads `scenario_provided.txt` with the right counts. | Parser also applies every validation rule in the design report. |
+| Sat 21 Nov | Dijkstra (`find_shortest_path`), station costs, nearest station. 3 broken scenario files are rejected cleanly. | Tie-break rules, 8+ broken files, help Member 3 with route problems. |
+| Mon 23 Nov | Report: graph, parser, Dijkstra complexity. README input-format section. | Alternatives table; build the 4 input sizes for the performance runs. |
 
-Coordinate with Member 2 on the `MinHeap` interface.
+## Member 2 - collections, entities, rules, log
+Files: `collections.hpp`, `min_heap`, `event_queue`, `robot`, `rescue_request`, `dispatch_rules`, `logger`
 
-- Review and extend the implemented environment and adjacency-list graph.
-- Implement the exact Appendix A scenario parser and validation.
-- Add parser tests using the untouched official `scenario_provided.txt`.
-- Test invalid counts, duplicate IDs, invalid references, blocked routes and unreachable locations.
-- Document Dijkstra's correctness and complexity.
+| By | Minimum | Ideal |
+| --- | --- | --- |
+| Mon 16 Nov | `DynamicArray` (grow, push_back, insert, remove, deep copy, destructor) and `LinkedList`. Merge first, everyone needs it. | More edge-case tests. |
+| Thu 19 Nov | `MinHeap`, `EventQueue`, request lifecycle, robot state rules, priority comparison and sort, mission battery, `save_to_file`. | Merge sort instead of insertion sort; a test for every illegal transition. |
+| Mon 23 Nov | Memory check (no leaks), report: entities, collections, complexity. README output-format section. | Run with `-fsanitize=address`; alternatives table. |
 
-## Member 2 — Data Structures, Robots and Requests
+## Member 3 - simulation and integration
+Files: `simulation.*`, `main.cpp`
 
-Files: `collections.hpp`, `min_heap.hpp/.cpp`, `robot.hpp/.cpp`, `rescue_request.hpp/.cpp`.
+| By | Minimum | Ideal |
+| --- | --- | --- |
+| Wed 18 Nov | `apply_due_events` and `apply_event` for all seven event types; `assign_pending_requests`. | Early exit when no robot is available. |
+| Fri 20 Nov | `travel`, `update_robot`, `decide_after_task`, `recheck_routes`, `interrupt_task`. Provided scenario runs all 250 steps and every request ends COMPLETED or FAILED. | Run twice and compare logs (determinism). |
+| Mon 23 Nov | Run all six scenarios and the 4 input sizes. README, implementation/testing/results report sections, save the output for `scenario_provided.txt`. | Walk one request through the log in the report. |
 
-- Understand and test the supplied DynamicArray and LinkedList.
-- Extend the data structures only when the project requires additional operations.
-- Review and test the supplied binary min-heap.
-- Review robot capability, battery and state-transition rules.
-- Review request assignment, work progress, completion, failure and reassignment.
-- Ensure one robot cannot own multiple requests and one request cannot be owned by multiple robots.
-
-## Member 3 — Simulation and Integration
-
-Files: `simulation.hpp/.cpp`, `logger.hpp/.cpp`, `main.cpp`, integration tests and output documentation.
-
-- Implement a deterministic discrete-time controller.
-- Process events in timestamp and input-file order.
-- Activate requests and apply deterministic request/robot selection.
-- Coordinate outbound movement, rescue work, return travel and charging.
-- Reassess routes after road, station or robot availability changes.
-- Produce a reconstructable log and final statistics.
-
-## Integration checkpoints
-
-1. All modules compile together.
-2. Collections, environment, heap and pathfinding tests pass.
-3. Parser loads the untouched provided scenario and rejects malformed variants.
-4. One simulation step produces deterministic state changes.
-5. Complete simulation produces logs and final statistics.
-6. Minimum-working, additional and stress scenarios are tested.
+## Working together
+- Merge only when your own `make testN` passes and the project still compiles.
+- If Member 3 is not done with dispatch by Wed 18 Nov, Member 1 takes `recheck_routes` and `interrupt_task`.
+- If collections are not merged by Mon 16 Nov, Members 1 and 3 help Member 2 finish them.
+- No new features after Sun 22 Nov.
+- Everyone reads the other two modules before the demo.

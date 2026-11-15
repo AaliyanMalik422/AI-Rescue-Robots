@@ -1,122 +1,100 @@
 #include "environment.hpp"
 
-namespace {
-bool valid_location_type(int type) {
-    return type == LOCATION_JUNCTION || type == LOCATION_BUILDING ||
-           type == LOCATION_HOSPITAL || type == LOCATION_DEPOT ||
-           type == LOCATION_CHARGING || type == LOCATION_COMMAND;
-}
-}
+// MEMBER 1: implement add_location, add_connection, get_connection_between and is_cut_off.
+// Lookups, getters and block/station setters are provided. See include/environment.hpp.
+// Index convention: locations[i], graph[i] and the lookup entry for locations[i].id all
+// describe the SAME location i. Connections work the same way with connections[k].
 
 Environment::Environment() {}
 
-int Environment::get_graph_index(int location_id) const {
-    for (int i = 0; i < graph.size(); ++i) {
-        if (graph[i].location_id == location_id) return i;
-    }
-    return -1;
-}
-
 bool Environment::add_location(const Location& location) {
-    if (location.id < 0 || !valid_location_type(location.type)) return false;
-    if (get_location(location.id) != 0) return false;
-
-    AdjacencyList adjacency;
-    adjacency.location_id = location.id;
-
-    if (!locations.push_back(location)) return false;
-    if (!graph.push_back(adjacency)) {
-        locations.pop_back();
-        return false;
-    }
-    return true;
+    // TODO (Member 1)
+    // PSEUDOCODE:
+    //   if location.id < 0: return false
+    //   if get_location_index(location.id) != -1: return false          (duplicate)
+    //   index = locations.size()
+    //   if not locations.push_back(location): return false
+    //   if not graph.push_back(empty LinkedList<NeighborNode>): locations.pop_back(); return false
+    //   if not location_lookup.insert(location.id, index):  undo both push_backs; return false
+    //   return true
+    (void)location;
+    return false;
 }
 
 bool Environment::add_connection(const Connection& connection) {
-    if (connection.id < 0 || connection.distance <= 0) return false;
-    if (connection.endpoint1_id < 0 || connection.endpoint2_id < 0) return false;
-    if (connection.endpoint1_id == connection.endpoint2_id) return false;
-    if (get_connection(connection.id) != 0) return false;
-
-    int first_index = get_graph_index(connection.endpoint1_id);
-    int second_index = get_graph_index(connection.endpoint2_id);
-    if (first_index < 0 || second_index < 0) return false;
-
-    if (!connections.push_back(connection)) return false;
-
-    // Appendix A connections are undirected, so store both directions.
-    NeighborNode first_neighbor(connection.endpoint2_id, connection.id);
-    NeighborNode second_neighbor(connection.endpoint1_id, connection.id);
-    graph[first_index].neighbors.push_back(first_neighbor);
-    graph[second_index].neighbors.push_back(second_neighbor);
-    return true;
+    // TODO (Member 1)
+    // PSEUDOCODE:
+    //   if connection.id < 0 or connection.distance <= 0: return false
+    //   if connection.endpoint1_id == connection.endpoint2_id: return false     (no self-loops)
+    //   if get_connection_index(connection.id) != -1: return false               (duplicate)
+    //   a = get_location_index(endpoint1_id); b = get_location_index(endpoint2_id)
+    //   if a == -1 or b == -1: return false                                      (unknown endpoint)
+    //   k = connections.size()
+    //   push the connection; insert (id -> k) in connection_lookup
+    //   graph[a].push_back(NeighborNode(b, k));  graph[b].push_back(NeighborNode(a, k))
+    //   return true
+    (void)connection;
+    return false;
 }
 
+int Environment::get_location_index(int id) const {
+    // DONE (provided)
+    int index = -1;
+    if (location_lookup.find(id, index)) return index;
+    return -1;
+}
+
+int Environment::get_connection_index(int id) const {
+    // DONE (provided)
+    int index = -1;
+    if (connection_lookup.find(id, index)) return index;
+    return -1;
+}
+
+// DONE (provided): lookups by ID and by array index.
 Location* Environment::get_location(int id) {
-    for (int i = 0; i < locations.size(); ++i) {
-        if (locations[i].id == id) return &locations[i];
-    }
-    return 0;
+    int i = get_location_index(id);
+    if (i < 0) return 0;
+    return &locations[i];
 }
-
 const Location* Environment::get_location(int id) const {
-    for (int i = 0; i < locations.size(); ++i) {
-        if (locations[i].id == id) return &locations[i];
-    }
-    return 0;
+    int i = get_location_index(id);
+    if (i < 0) return 0;
+    return &locations[i];
 }
-
 Location* Environment::get_location_at(int index) { return locations.get(index); }
 const Location* Environment::get_location_at(int index) const { return locations.get(index); }
-int Environment::get_location_count() const { return locations.size(); }
-
 Connection* Environment::get_connection(int id) {
-    for (int i = 0; i < connections.size(); ++i) {
-        if (connections[i].id == id) return &connections[i];
-    }
-    return 0;
+    int i = get_connection_index(id);
+    if (i < 0) return 0;
+    return &connections[i];
 }
-
 const Connection* Environment::get_connection(int id) const {
-    for (int i = 0; i < connections.size(); ++i) {
-        if (connections[i].id == id) return &connections[i];
-    }
-    return 0;
+    int i = get_connection_index(id);
+    if (i < 0) return 0;
+    return &connections[i];
 }
-
 Connection* Environment::get_connection_at(int index) { return connections.get(index); }
 const Connection* Environment::get_connection_at(int index) const { return connections.get(index); }
-int Environment::get_connection_count() const { return connections.size(); }
 
-Connection* Environment::get_connection_between(int from_id, int to_id) {
-    for (int i = 0; i < connections.size(); ++i) {
-        const Connection& connection = connections[i];
-        if ((connection.endpoint1_id == from_id && connection.endpoint2_id == to_id) ||
-            (connection.endpoint1_id == to_id && connection.endpoint2_id == from_id)) {
-            return &connections[i];
-        }
-    }
-    return 0;
+const LinkedList<NeighborNode>* Environment::get_neighbors_at(int index) const {
+    // DONE (provided)
+    if (index < 0 || index >= graph.size()) return 0;
+    return &graph[index];
 }
 
 const Connection* Environment::get_connection_between(int from_id, int to_id) const {
-    for (int i = 0; i < connections.size(); ++i) {
-        const Connection& connection = connections[i];
-        if ((connection.endpoint1_id == from_id && connection.endpoint2_id == to_id) ||
-            (connection.endpoint1_id == to_id && connection.endpoint2_id == from_id)) {
-            return &connections[i];
-        }
-    }
+    // TODO (Member 1)
+    // PSEUDOCODE: a = get_location_index(from_id); if a == -1 return 0
+    //   walk the neighbour list of a; for each node whose target location has ID to_id:
+    //       return &connections[node.connection_index]
+    //   return 0
+    (void)from_id; (void)to_id;
     return 0;
 }
 
-const LinkedList<NeighborNode>* Environment::get_neighbors(int location_id) const {
-    int index = get_graph_index(location_id);
-    if (index < 0) return 0;
-    return &graph[index].neighbors;
-}
-
 bool Environment::set_connection_blocked(int connection_id, bool blocked) {
+    // DONE (provided): one shared record, so both directions always agree.
     Connection* connection = get_connection(connection_id);
     if (connection == 0) return false;
     connection->is_blocked = blocked;
@@ -124,24 +102,33 @@ bool Environment::set_connection_blocked(int connection_id, bool blocked) {
 }
 
 bool Environment::set_station_available(int location_id, bool available) {
+    // DONE (provided)
     Location* location = get_location(location_id);
     if (location == 0 || location->type != LOCATION_CHARGING) return false;
     location->station_available = available;
     return true;
 }
 
-bool Environment::has_operational_station(int location_id) const {
+bool Environment::is_operational_station(int location_id) const {
+    // DONE (provided)
     const Location* location = get_location(location_id);
     return location != 0 && location->type == LOCATION_CHARGING && location->station_available;
 }
 
-bool Environment::is_charging_station(int location_id) const {
-    const Location* location = get_location(location_id);
-    return location != 0 && location->type == LOCATION_CHARGING;
+bool Environment::is_cut_off(int location_id) const {
+    // TODO (Member 1)
+    // PSEUDOCODE: i = get_location_index(location_id); if i == -1: return false
+    //   for each neighbour node of graph[i]: if connections[node.connection_index] is NOT blocked: return false
+    //   return true      (a location with no connections at all is also cut off)
+    (void)location_id;
+    return false;
 }
 
 void Environment::clear() {
+    // DONE (provided)
     locations.clear();
     connections.clear();
     graph.clear();
+    location_lookup.clear();
+    connection_lookup.clear();
 }

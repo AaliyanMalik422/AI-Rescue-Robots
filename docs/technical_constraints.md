@@ -1,29 +1,24 @@
 # Technical Constraints and Approval Register
 
-## Confirmed team decisions
+## Approved (team decision)
+- C++17, GCC. Headers: `<iostream>`, `<fstream>`, `<sstream>`, `<string>`, `<cmath>`.
+- Studied and allowed: classes, basic templates, pointers, `new`/`delete[]`,
+  constructors/destructors, copy constructor / copy assignment, operator overloading
+  (instructor-confirmed), references, `const`, `#define` for the small test macros.
+- Named integer constants instead of enums.
 
-- C++17 is the build target.
-- Explicitly approved headers: `<iostream>`, `<fstream>`, `<sstream>`, `<string>`, `<cmath>`.
-- STL containers are not allowed.
-- Required data structures must be implemented manually.
-- Basic templates, pointers, `new` and `delete` have been studied.
-- Enums have not been studied; named integer constants are used in this starter.
-- Avoid other headers, advanced library facilities and third-party packages unless approved.
+## Not allowed
+- Any STL container (`vector`, `list`, `queue`, `stack`, `deque`, `map`, `set`,
+  `priority_queue`, ...), `<algorithm>`, `std::sort`, smart pointers, lambdas, `auto`,
+  `std::move`/move semantics, namespaces for helpers, `static` class members, `explicit`,
+  `<climits>`, `<utility>`, third-party libraries.
+- External ML, pathfinding, scheduling or simulation libraries (instructor approval needed).
 
-## Official project constraints
+## Audit of this skeleton (Nov 14)
+- Only `iostream`, `fstream`, `sstream`, and `string` are included anywhere.
+- Removed from the earlier starter: `<climits>`, `<utility>`, `std::move` tests,
+  anonymous namespaces, `explicit`, `static` Logger/Pathfinder/Parser members.
 
-- The implementation must be in C++.
-- Core data structures central to the solution must be student-implemented.
-- STL containers are prohibited.
-- External machine-learning, pathfinding, scheduling or simulation libraries require instructor approval.
-- The program must be modular and dynamic memory must be handled safely.
-
-## Still conditional
-
-Ask the instructor before using:
-- `<algorithm>` and functions such as `std::sort` or `std::find`.
-- `<chrono>` for execution-time measurement.
-- Any other unapproved standard header.
-- Third-party testing, parsing, logging or utility libraries.
-
-This register records the group's current understanding; it does not claim that every unlisted C++ facility is explicitly prohibited by the official document.
+## Still conditional (ask the instructor)
+- `<ctime>` / `<chrono>`: not needed; performance is shown with work counters.
+- Any other standard header.

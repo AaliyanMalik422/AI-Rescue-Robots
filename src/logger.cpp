@@ -1,29 +1,26 @@
 #include "logger.hpp"
+#include "names.hpp"
 #include <iostream>
 #include <fstream>
 
-DynamicArray<std::string> Logger::entries;
+// MEMBER 2: logger implementation.
 
-void Logger::log(const std::string& message) {
-    std::cout << "[LOG] " << message << '\n';
-    entries.push_back(message);
+Logger::Logger() : echo_to_console(false) {}
+
+void Logger::log(int time, const std::string& event,
+                 const std::string& ids, const std::string& detail) {
+    // DONE (provided)
+    std::string line = int_to_string(time) + "," + event + "," + ids + "," + detail;
+    entries.push_back(line);
+    if (echo_to_console) std::cout << line << '\n';
 }
 
-bool Logger::save_to_file(const std::string& filename) {
-    std::ofstream output(filename.c_str());
-    if (!output.is_open()) {
-        std::cerr << "Could not open log file: " << filename << '\n';
-        return false;
-    }
-
-    for (int i = 0; i < entries.size(); ++i) {
-        output << entries[i] << '\n';
-    }
-
-    output.close();
-    return !output.fail();
-}
-
-void Logger::clear() {
-    entries.clear();
+bool Logger::save_to_file(const std::string& filename) const {
+    // TODO (Member 2)
+    // PSEUDOCODE: open an ofstream; if it failed to open: return false
+    //   write the header line "time,event,ids,detail"
+    //   for i in 0..entries.size()-1: write entries[i] and a newline
+    //   return true only if no write error occurred
+    (void)filename;
+    return false;
 }

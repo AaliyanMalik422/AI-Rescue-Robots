@@ -1,65 +1,82 @@
 #include "min_heap.hpp"
 
+// MEMBER 2: indexed binary min-heap. heap[i] has children 2i+1 and 2i+2 and parent (i-1)/2.
+// Invariant: position[heap[i].item] == i for every stored entry; position[x] == -1 otherwise.
+
 MinHeap::MinHeap() {}
 
 bool MinHeap::has_higher_priority(const PathNode& first, const PathNode& second) const {
+    // DONE (provided)
     if (first.cost != second.cost) return first.cost < second.cost;
-    return first.location_id < second.location_id;
+    return first.item < second.item;
+}
+
+void MinHeap::swap_entries(int first_index, int second_index) {
+    // DONE (provided)
+    PathNode temporary = heap[first_index];
+    heap[first_index] = heap[second_index];
+    heap[second_index] = temporary;
+    position[heap[first_index].item] = first_index;
+    position[heap[second_index].item] = second_index;
 }
 
 void MinHeap::heapify_up(int index) {
-    while (index > 0) {
-        int parent = (index - 1) / 2;
-        if (!has_higher_priority(heap[index], heap[parent])) break;
-
-        PathNode temporary = heap[index];
-        heap[index] = heap[parent];
-        heap[parent] = temporary;
-        index = parent;
-    }
+    // TODO (Member 2)
+    // PSEUDOCODE: while index > 0:
+    //     parent = (index - 1) / 2
+    //     if heap[index] does not beat heap[parent]: stop
+    //     swap_entries(index, parent); index = parent
+    (void)index;
 }
 
 void MinHeap::heapify_down(int index) {
-    int count = heap.size();
-
-    while (true) {
-        int left = 2 * index + 1;
-        int right = 2 * index + 2;
-        int best = index;
-
-        if (left < count && has_higher_priority(heap[left], heap[best])) best = left;
-        if (right < count && has_higher_priority(heap[right], heap[best])) best = right;
-        if (best == index) break;
-
-        PathNode temporary = heap[index];
-        heap[index] = heap[best];
-        heap[best] = temporary;
-        index = best;
-    }
+    // TODO (Member 2)
+    // PSEUDOCODE: loop:
+    //     left = 2*index+1; right = 2*index+2; best = index
+    //     if left  < size and heap[left]  beats heap[best]: best = left
+    //     if right < size and heap[right] beats heap[best]: best = right
+    //     if best == index: stop
+    //     swap_entries(index, best); index = best
+    (void)index;
 }
 
-bool MinHeap::insert(const PathNode& node) {
-    if (!heap.push_back(node)) return false;
-    heapify_up(heap.size() - 1);
-    return true;
+void MinHeap::reset(int id_capacity) {
+    // DONE (provided)
+    heap.clear();
+    position.clear();
+    for (int i = 0; i < id_capacity; ++i) position.push_back(-1);
+}
+
+bool MinHeap::insert_or_decrease(int item, long long cost) {
+    // TODO (Member 2)
+    // PSEUDOCODE:
+    //   if item < 0 or item >= position.size(): return false
+    //   if position[item] == -1:                      (new item)
+    //       push_back PathNode(item, cost) (return false if that fails)
+    //       position[item] = heap.size() - 1; heapify_up(heap.size() - 1); return true
+    //   else:                                         (already stored)
+    //       i = position[item]
+    //       if cost < heap[i].cost: heap[i].cost = cost; heapify_up(i)   (smaller cost can only move up)
+    //       return true
+    (void)item; (void)cost;
+    return false;
 }
 
 bool MinHeap::extract_min(PathNode& result) {
-    if (heap.empty()) return false;
-
-    result = heap[0];
-    int last_index = heap.size() - 1;
-    if (last_index == 0) {
-        heap.pop_back();
-        return true;
-    }
-
-    heap[0] = heap[last_index];
-    heap.pop_back();
-    heapify_down(0);
-    return true;
+    // TODO (Member 2)
+    // PSEUDOCODE:
+    //   if heap is empty: return false
+    //   result = heap[0]; position[result.item] = -1
+    //   last = heap.size() - 1
+    //   if last > 0: heap[0] = heap[last]; position[heap[0].item] = 0
+    //   heap.pop_back()
+    //   if heap is not empty: heapify_down(0)
+    //   return true
+    (void)result;
+    return false;
 }
 
-bool MinHeap::empty() const { return heap.empty(); }
-int MinHeap::size() const { return heap.size(); }
-void MinHeap::clear() { heap.clear(); }
+bool MinHeap::contains(int item) const {
+    // DONE (provided)
+    return item >= 0 && item < position.size() && position[item] != -1;
+}

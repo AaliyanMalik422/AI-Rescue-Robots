@@ -1,9 +1,7 @@
 ai_rescue_robots
-core_tests
+test_member1
+test_member2
+test_member3
 output/*
 !output/.gitkeep
 *.o
-
-# Compiled files
-/ai_rescue_robots
-/core_tests
