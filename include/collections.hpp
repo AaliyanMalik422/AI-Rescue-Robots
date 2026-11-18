@@ -16,17 +16,16 @@ private:
     bool grow() {//resize
         int new_cap;
         if (curr_cap == 0) {
-
             new_cap = 4;
         }
         else if (curr_cap > 1073741823)// doubling would overflow int
             return false;
-        
-        else 
+
+        else
             new_cap = curr_cap * 2;
         T* new_block = new T[new_cap];
 
-        for (int i = 0; i < length; ++i) 
+        for (int i = 0; i < len; ++i)
             new_block[i] = data[i];
 
         delete[] data;
@@ -54,7 +53,7 @@ public:
 
     DynamicArray<T>& operator=(const DynamicArray<T>& other) {//assingment constructor
 
-        if (this == &other) 
+        if (this == &other)
             return *this;
 
         T* new_block = 0;
@@ -78,35 +77,37 @@ public:
 
     bool push_back(const T& val) {
 
-       
+        T tmp = val;
 
-        if (len == curr_cap && !grow()) //if size is full and cant resise 
+        if (len == curr_cap && !grow()) //if size is full and cant resise
             return false;
 
-        data[len] = val;
+        data[len] = tmp;
         len++;
 
         return true;
     }
 
     bool insert_at(int idx, const T& val) {
-      
-        if (idx<0 or idx > len)
-            return false;
-        
-        if (len == curr_cap && !grow()) 
+
+        if (idx < 0 || idx > len)
             return false;
 
-        for (int i = len;i > idx;i--) {//shifting right til index 
-            data[i]=data[i-1]
+        T tmp = val;
+
+        if (len == curr_cap && !grow())
+            return false;
+
+        for (int i = len; i > idx; i--) {//shifting right til index
+            data[i] = data[i - 1];
         }
-        data[idx] = val;
+        data[idx] = tmp;
         len++;
         return true;
     }
 
     bool pop_back() {
-        if (len == 0) 
+        if (len == 0)
             return false;
         len--;
         data[len] = T();
@@ -116,7 +117,7 @@ public:
 
     bool remove_at(int idx) {
 
-        if (idx < 0 || idx >= len) 
+        if (idx < 0 || idx >= len)
             return false;//invalid index
 
         for (int i = idx; i < len - 1; ++i) //shifting
@@ -128,7 +129,8 @@ public:
     }
 
     void clear() {
-        for (int i = 0; i < len; ++i) data[i] = T();
+        for (int i = 0; i < len; ++i)
+            data[i] = T();
         len = 0;
     }
 
@@ -139,16 +141,16 @@ public:
     T& operator[](int idx) { return data[idx]; }
     const T& operator[](int idx) const { return data[idx]; }
 
-    T* get(int index) {
+    T* get(int idx) {
 
-        if (index < 0 || index >= length) return 0;
-        return &data[index];
+        if (idx < 0 || idx >= len) return 0;
+        return &data[idx];
     }
 
-    const T* get(int index) const {
+    const T* get(int idx) const {
 
-        if (index < 0 || index >= length) return 0;
-        return &data[index];
+        if (idx < 0 || idx >= len) return 0;
+        return &data[idx];
     }
 };
 
@@ -180,12 +182,12 @@ public:
         while (node != 0) {
             push_back(node->data);
             node = node->next;
-
+        }
     }
 
     LinkedList<T>& operator=(const LinkedList<T>& other) {//deep copy-assingment constructor
-        
-        if (this == &other) 
+
+        if (this == &other)
             return *this;
         clear();
 
@@ -207,13 +209,13 @@ public:
         nn->next = head;
         head = nn;
 
-        if (tail == 0) 
+        if (tail == 0)
             tail = nn;
 
         len++;
         return true;
     }
-    bool push_back(const T& value) { 
+    bool push_back(const T& value) {
 
         ListNode<T>* nn = new ListNode<T>(value);
 
@@ -229,9 +231,9 @@ public:
         return true;
     }
 
-    bool pop_front() { 
+    bool pop_front() {
 
-        if (head == 0) 
+        if (head == 0)
             return false;
 
         ListNode<T>* tmp = head;
@@ -240,13 +242,13 @@ public:
 
         len--;
 
-        if (head == 0) 
+        if (head == 0)
             tail = 0;
         return true;
     }
 
     bool pop_back() {
-        if (head == 0) 
+        if (head == 0)
             return false;
 
         if (head == tail) {
@@ -259,7 +261,7 @@ public:
 
         ListNode<T>* tmp = head;
 
-        while (tmp->next != tail) 
+        while (tmp->next != tail)
             tmp = tmp->next;
 
         delete tail;
@@ -270,26 +272,26 @@ public:
     }
 
     void clear() {
-    
-        while (head != 0) 
+
+        while (head != 0)
             pop_front();
         tail = 0;
         len = 0;
     }
 
-    T* find(const T& value) { 
-    
+    T* find(const T& value) {
+
         ListNode<T>* node = head;
         while (node != 0) {
-            if (node->data == value) 
+            if (node->data == value)
                 return &node->data;
             node = node->next;
         }
         return 0;
     }
 
-    int size() const { return length; }
-    bool empty() const { return length == 0; }
+    int size() const { return len; }
+    bool empty() const { return len == 0; }
     ListNode<T>* get_head() { return head; }
     const ListNode<T>* get_head() const { return head; }
 };
