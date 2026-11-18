@@ -94,36 +94,222 @@ void SimulationController::run() {
 // ---------------------------------------------------------------------
 
 void SimulationController::apply_due_events() {
-    // TODO (Member 3)
-    // PSEUDOCODE: loop:
-    //     if event_queue.peek(next) fails or next.timestamp != current_time: stop
-    //     event_queue.pop(next)
-    //     ok = apply_event(next)
-    //     log(current_time, ok ? "EVENT" : "REJECTED", "target=<id>", event_type_name(type))
-    // (EventQueue returns equal-timestamp events in file order, which is the required rule.)
+    Event next;
+
+    // Process all events whose scheduled time has arrived.
+    // EventQueue maintains timestamp order and file order for ties.
+    while (event_queue.peek(next)) {
+
+        // The next event is scheduled for a future time.
+        if (next.timestamp > current_time) {
+            break;
+        }
+
+        // Remove the next due event from the queue.
+        if (!event_queue.pop(next)) {
+            break;
+        }
+
+        // Apply the event.
+        bool applied = apply_event(next);
+
+        // Prepare the event description for logging.
+        std::string detail = event_type_name(next.type);
+
+        if (next.type == EVENT_SET_URGENCY) {
+            detail += ";urgency=";
+            detail += int_to_string(next.value);
+        }
+
+        // Record whether the event was successful.
+        logger.log(
+            current_time,
+            applied ? "EVENT" : "REJECTED",
+            "target=" + int_to_string(next.target_id),
+            detail
+        );
+    }
 }
 
 bool SimulationController::apply_event(const Event& event) {
-    // TODO (Member 3)
-    // PSEUDOCODE by event.type (return false when the target does not exist / is invalid):
-    //   BLOCK, UNBLOCK : return environment.set_connection_blocked(target, type == BLOCK)
-    //                    (the blocking is NOT acted on here; recheck_routes does that in stage 3)
-    //   STATION_DOWN/UP: return environment.set_station_available(target, type == STATION_UP)
-    //   SET_URGENCY    : i = find_request_index(target); if i == -1 return false
-    //                    return requests[i].set_urgency(event.value)
-    //   ROBOT_OFFLINE  : i = find_robot_index(target); if i == -1 or robot already OFFLINE: return false
-    //                    request_id = robots[i].go_offline()
-    //                    if request_id != -1: j = find_request_index(request_id);
-    //                        requests[j].return_to_pending();  statistics.reassignments++
-    //                    log ROBOT_STATE (old -> OFFLINE) and REQUEST_STATE if it changed
-    //   ROBOT_ONLINE   : i = find_robot_index(target); if i == -1 or robot is not OFFLINE: return false
-    //                    robot.go_online()                     -> state AVAILABLE
-    //                    if robot.is_on_road(): change_robot_state(UNAVAILABLE)
-    //                         (update_robot keeps crossing the road once it is open)
-    //                    else if robot is at an operational station and battery < max_battery:
-    //                         change_robot_state(RECHARGING)
-    //                    else decide_after_task(robot)
-    (void)event;
+
+    // BLOCK: Block a road connection.
+    if (event.type == EVENT_BLOCK) {
+        return environment.set_connection_blocked(event.target_id, true);
+    }
+
+    // UNBLOCK: Reopen a road connection.
+    if (event.type == EVENT_UNBLOCK) {
+        return environment.set_connection_blocked(event.target_id, false);
+    }
+
+    // STATION_DOWN: Make a charging station unavailable.
+    if (event.type == EVENT_STATION_DOWN) {
+        return environment.set_station_available(event.target_id, false);
+    }
+
+    // STATION_UP: Make a charging station available.
+    if (event.type == EVENT_STATION_UP) {
+        return environment.set_station_available(event.target_id, true);
+    }
+
+    // SET_URGENCY: Change the urgency of a rescue request.
+    if (event.type == EVENT_SET_URGENCY) {
+
+        int index = find_request_index(event.target_id);
+
+        if (index == -1) {
+            return false;
+        }
+
+        return requests[index].set_urgency(event.value);
+    }
+
+    // ROBOT_OFFLINE: Take a robot out of service.
+    if (event.type == EVENT_ROBOT_OFFLINE) {
+
+        int index = find_robot_index(event.target_id);
+
+        if (index == -1) {
+            return false;
+        }
+
+        Robot& robot = robots[index];
+
+        // A robot already offline cannot be taken offline again.
+        if (robot.state == ROBOT_OFFLINE) {
+            return false;
+        }
+
+        int request_id = robot.assigned_request_id;
+        int request_index = -1;
+        int old_request_state = -1;
+
+        // Validate the robot's current request before changing anything.
+        if (request_id != -1) {
+
+            request_index = find_request_index(request_id);
+
+            if (request_index == -1) {
+                return false;
+            }
+
+            RescueRequest& request = requests[request_index];
+
+            // Confirm that this request actually belongs to this robot.
+            if (request.assigned_robot_id != robot.id) {
+                return false;
+            }
+
+            // Only an assigned or in-progress request can be interrupted.
+            if (request.state != REQUEST_ASSIGNED &&
+                request.state != REQUEST_IN_PROGRESS) {
+                return false;
+            }
+
+            old_request_state = request.state;
+        }
+
+        int old_robot_state = robot.state;
+
+        // Take the robot offline.
+        // go_offline() clears its assignment and route but preserves
+        // its physical location and any progress on its current road.
+        int released_request_id = robot.go_offline();
+
+        if (released_request_id != request_id ||
+            robot.state != ROBOT_OFFLINE) {
+            return false;
+        }
+
+        // Return its interrupted request to PENDING.
+        if (request_index != -1) {
+
+            if (!requests[request_index].return_to_pending()) {
+                return false;
+            }
+
+            statistics.reassignments++;
+
+            logger.log(
+                current_time,
+                "REQUEST_STATE",
+                "request=" + int_to_string(request_id),
+                std::string(request_state_name(old_request_state)) +
+                "->PENDING;ROBOT_OFFLINE"
+            );
+        }
+
+        // Record the robot's state transition.
+        logger.log(
+            current_time,
+            "ROBOT_STATE",
+            "robot=" + int_to_string(robot.id),
+            std::string(robot_state_name(old_robot_state)) +
+            "->OFFLINE;ROBOT_OFFLINE"
+        );
+
+        return true;
+    }
+
+    // ROBOT_ONLINE: Bring an offline robot back into service.
+    if (event.type == EVENT_ROBOT_ONLINE) {
+
+        int index = find_robot_index(event.target_id);
+
+        if (index == -1) {
+            return false;
+        }
+
+        Robot& robot = robots[index];
+
+        // Only an offline robot can be brought online.
+        if (robot.state != ROBOT_OFFLINE) {
+            return false;
+        }
+
+        if (!robot.go_online()) {
+            return false;
+        }
+
+        // go_online() changes OFFLINE directly to AVAILABLE.
+        logger.log(
+            current_time,
+            "ROBOT_STATE",
+            "robot=" + int_to_string(robot.id),
+            "OFFLINE->AVAILABLE;ROBOT_ONLINE"
+        );
+
+        // If the robot is still crossing a road, it must finish
+        // crossing before receiving another task.
+        if (robot.is_on_road()) {
+            return change_robot_state(
+                robot,
+                ROBOT_UNAVAILABLE,
+                "online;finish current road"
+            );
+        }
+
+        // If it is at an operational charging station and its battery
+        // is not full, it should start recharging.
+        if (environment.is_operational_station(robot.current_location_id) &&
+            robot.battery_level < robot.max_battery) {
+
+            return change_robot_state(
+                robot,
+                ROBOT_RECHARGING,
+                "online at charging station"
+            );
+        }
+
+        // Otherwise, decide whether it should become available
+        // or return to a charging station.
+        decide_after_task(robot);
+
+        return true;
+    }
+
+    // Unknown event type.
     return false;
 }
 
