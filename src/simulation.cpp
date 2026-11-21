@@ -337,32 +337,280 @@ void SimulationController::releaseDueRequests() {
 // ---------------------------------------------------------------------
 
 void SimulationController::recheckRoutes() {
-	// TODO (Member 3)
-	// PSEUDOCODE: stationCosts = empty; computed = false
-	//   for each robot that is not OFFLINE and not on a road:
-	//     case TRAVELLING (has a task):
-	//         if route_is_open(planned_route, next_route_index - 1):  route still fine
-	//         else: r = searchRoute(robot.current_location_id, robot.mission_target_id)
-	//               if not r.exists: interruptTask(robot, "no route"); continue
-	//               robot.set_route(r.route, r.connection_ids); log REROUTE
-	//         then the battery reserve check (below)
-	//     case PERFORMING: battery reserve check (below)
-	//     case RETURNING:
-	//         if the station robot.mission_target_id is still operational and the route is open: fine
-	//         else r = searchNearestStation(current location)
-	//              if r.exists: robot.set_route(...); log REROUTE
-	//              else: robot.clear_route(); changeRobotState(UNAVAILABLE)
-	//     case RECHARGING:
-	//         if the station at its location is no longer operational:
-	//              r = searchNearestStation(current location) -> RETURNING with that route,
-	//              or UNAVAILABLE when no station is reachable
-	//   Battery reserve check (TRAVELLING with a route, PERFORMING):
-	//         compute stationCosts once per call (compute_station_costs, count edgesRelaxed)
-	//         remainingCost = cost of the rest of the route (0 when PERFORMING)
-	//         need = mission_battery_required(remainingCost, request.remaining_work,
-	//                                         stationCosts[index of the request location], pc, pw)
-	//         if need == -1 or robot.battery_level < need: interruptTask(robot, "battery reserve")
-	//   Robots mid-road are skipped: they finish the road, and are checked at the next location.
+	DynamicArray<long long> stationCosts;
+	bool stationCostsComputed = false;
+
+	// Check every robot against the updated environment.
+	for (int i = 0; i < robots.size(); ++i) {
+		Robot& robot = robots[i];
+
+		// Offline robots and robots crossing roads are checked later.
+		if (robot.state == ROBOT_OFFLINE || robot.is_on_road()) {
+			continue;
+		}
+
+		// ---------------------------------------------------------
+		// CASE 1: ROBOT_TRAVELLING
+		// ---------------------------------------------------------
+		if (robot.state == ROBOT_TRAVELLING) {
+
+			// Check whether the remaining route is still open.
+			if (!route_is_open(
+				environment,
+				robot.planned_route,
+				robot.next_route_index - 1
+			)) {
+				// Find an alternative route to the rescue location.
+				PathResult replacement = searchRoute(
+					robot.current_location_id,
+					robot.mission_target_id
+				);
+
+				// No alternative route exists.
+				if (!replacement.exists) {
+					interruptTask(robot, "no route");
+					continue;
+				}
+
+				// Store the replacement route.
+				if (!robot.set_route(
+					replacement.route,
+					replacement.connection_ids
+				)) {
+					interruptTask(robot, "reroute failed");
+					continue;
+				}
+
+				// Record the new route.
+				logger.log(
+					currentTime,
+					"REROUTE",
+					"robot=" + int_to_string(robot.id),
+					"target=" + int_to_string(robot.mission_target_id) +
+					";cost=" + int_to_string(replacement.total_cost)
+				);
+			}
+		}
+
+		// ---------------------------------------------------------
+		// CASE 2: ROBOT_RETURNING
+		// ---------------------------------------------------------
+		else if (robot.state == ROBOT_RETURNING) {
+
+			bool stationAvailable =
+				environment.is_operational_station(robot.mission_target_id);
+
+			bool routeOpen = route_is_open(
+				environment,
+				robot.planned_route,
+				robot.next_route_index - 1
+			);
+
+			// Existing destination and route are still valid.
+			if (stationAvailable && routeOpen) {
+				continue;
+			}
+
+			// Find another operational charging station.
+			PathResult replacement = searchNearestStation(
+				robot.current_location_id
+			);
+
+			if (!replacement.exists || replacement.route.size() == 0) {
+				robot.clear_route();
+
+				changeRobotState(
+					robot,
+					ROBOT_UNAVAILABLE,
+					"no operational station reachable"
+				);
+				continue;
+			}
+
+			if (!robot.set_route(
+				replacement.route,
+				replacement.connection_ids
+			)) {
+				robot.clear_route();
+
+				changeRobotState(
+					robot,
+					ROBOT_UNAVAILABLE,
+					"station reroute failed"
+				);
+				continue;
+			}
+
+			robot.return_station_id =
+				replacement.route[replacement.route.size() - 1];
+
+			logger.log(
+				currentTime,
+				"REROUTE",
+				"robot=" + int_to_string(robot.id),
+				"station=" + int_to_string(robot.return_station_id) +
+				";cost=" + int_to_string(replacement.total_cost)
+			);
+
+			continue;
+		}
+
+		// ---------------------------------------------------------
+		// CASE 3: ROBOT_RECHARGING
+		// ---------------------------------------------------------
+		else if (robot.state == ROBOT_RECHARGING) {
+
+			// Its current charging station is still operational.
+			if (environment.is_operational_station(
+				robot.current_location_id
+			)) {
+				continue;
+			}
+
+			// The current station went down. Find another one.
+			PathResult replacement = searchNearestStation(
+				robot.current_location_id
+			);
+
+			if (!replacement.exists || replacement.route.size() == 0) {
+				robot.clear_route();
+
+				changeRobotState(
+					robot,
+					ROBOT_UNAVAILABLE,
+					"charging station unavailable"
+				);
+				continue;
+			}
+
+			if (!robot.set_route(
+				replacement.route,
+				replacement.connection_ids
+			)) {
+				robot.clear_route();
+
+				changeRobotState(
+					robot,
+					ROBOT_UNAVAILABLE,
+					"station reroute failed"
+				);
+				continue;
+			}
+
+			robot.return_station_id =
+				replacement.route[replacement.route.size() - 1];
+
+			changeRobotState(
+				robot,
+				ROBOT_RETURNING,
+				"current station unavailable"
+			);
+
+			logger.log(
+				currentTime,
+				"REROUTE",
+				"robot=" + int_to_string(robot.id),
+				"station=" + int_to_string(robot.return_station_id) +
+				";cost=" + int_to_string(replacement.total_cost)
+			);
+
+			continue;
+		}
+
+		// Only travelling and performing robots need mission reserves.
+		else if (robot.state != ROBOT_PERFORMING) {
+			continue;
+		}
+
+		// ---------------------------------------------------------
+		// CASE 4: BATTERY RESERVE CHECK
+		// Applies to TRAVELLING and PERFORMING robots.
+		// ---------------------------------------------------------
+
+		int requestIndex = findRequestIndex(robot.assigned_request_id);
+
+		if (requestIndex == -1) {
+			interruptTask(robot, "missing assigned request");
+			continue;
+		}
+
+		// Calculate the cost of reaching the nearest operational
+		// charging station only once during this function call.
+		if (!stationCostsComputed) {
+			statistics.edgesRelaxed +=
+				compute_station_costs(environment, stationCosts);
+
+			stationCostsComputed = true;
+		}
+
+		RescueRequest& request = requests[requestIndex];
+
+		int requestLocationIndex =
+			environment.get_location_index(request.location_id);
+
+		// Validate the station-cost lookup index.
+		if (requestLocationIndex < 0 ||
+			requestLocationIndex >= stationCosts.size()) {
+
+			interruptTask(robot, "battery reserve unavailable");
+			continue;
+		}
+
+		// PERFORMING robots have already reached their destination.
+		long long remainingCost = 0;
+
+		// TRAVELLING robots still need to reach the rescue location.
+		if (robot.state == ROBOT_TRAVELLING) {
+
+			int firstConnectionIndex = robot.next_route_index - 1;
+
+			if (firstConnectionIndex < 0 ||
+				firstConnectionIndex > robot.planned_connections.size()) {
+
+				interruptTask(robot, "invalid remaining route");
+				continue;
+			}
+
+			// Add the distance of every remaining road.
+			for (int j = firstConnectionIndex;
+				j < robot.planned_connections.size(); ++j) {
+
+				const Connection* connection =
+					environment.get_connection(robot.planned_connections[j]);
+
+				if (connection == 0) {
+					remainingCost = -1;
+					break;
+				}
+
+				remainingCost += connection->distance;
+			}
+
+			if (remainingCost < 0) {
+				interruptTask(robot, "invalid remaining route");
+				continue;
+			}
+		}
+
+		// Calculate battery required for the remaining mission,
+		// including the return to an operational charging station.
+		long long requiredBattery = mission_battery_required(
+			remainingCost,
+			request.remaining_work,
+			stationCosts[requestLocationIndex],
+			settings.battery_per_cost_unit,
+			settings.battery_per_work_step
+		);
+
+		// Interrupt if no return station is reachable or
+		// the robot cannot afford the remaining mission.
+		if (requiredBattery == -1 ||
+			robot.battery_level < requiredBattery) {
+
+			interruptTask(robot, "battery reserve");
+			continue;
+		}
+	}
 }
 
 // ---------------------------------------------------------------------
