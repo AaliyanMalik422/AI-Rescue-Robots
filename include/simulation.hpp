@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SIMULATION_HPP
+#define SIMULATION_HPP
 
 #include <iostream>
 #include <string>
@@ -12,15 +13,17 @@
 #include "dispatch_rules.hpp"
 #include "pathfinder.hpp"
 
+using namespace std;
+
 // =====================================================================
 // MEMBER 3 - Simulation controller and integration.
 //
-// ONE STEP, for current_time = 0 .. max_steps-1, in this order (design report 4.3):
-//   1. apply_due_events      events with timestamp == t, in file order
-//   2. release_due_requests  UNREPORTED -> PENDING when report_time <= t
-//   3. recheck_routes        reroute / interrupt robots affected by events
-//   4. advance_robots        move, work, complete, recharge (robots active at this point)
-//   5. assign_pending_requests   new assignments start moving on the NEXT step
+// ONE STEP, for currentTime = 0 .. max_steps-1, in this order (design report 4.3):
+//   1. applyDueEvents      events with timestamp == t, in file order
+//   2. releaseDueRequests  UNREPORTED -> PENDING when report_time <= t
+//   3. recheckRoutes        reroute / interrupt robots affected by events
+//   4. advanceRobots        move, work, complete, recharge (robots active at this point)
+//   5. assignPendingRequests   new assignments start moving on the NEXT step
 //   After step max_steps-1: every request not COMPLETED -> FAILED (TIME_LIMIT).
 //
 // Log event names to use (column 2 of the CSV log):
@@ -35,103 +38,105 @@
 //     RECHARGING starts on the next step.
 //   * Each PERFORMING step: perform 1 unit of work and spend battery_per_work_step.
 //   * Utilisation = busy_steps / online_steps, busy = steps started TRAVELLING or PERFORMING.
-//   * conflicts_prevented = number of requests for which MORE THAN ONE robot was feasible
+//   * conflictsPrevented = number of requests for which MORE THAN ONE robot was feasible
 //     (only one is chosen).
 // =====================================================================
 
 struct SimulationStatistics {
-    int completed_requests;
-    int failed_requests;
-    int unresolved_at_end;
-    int assignments;
-    int reassignments;
-    int conflicts_prevented;
-    long long total_movement_cost;
-    long long total_battery_used;
-    long long total_response_time;
-    int maximum_response_time;
-    long long route_searches;     // work counters for the performance analysis
-    long long edges_relaxed;
+	int completedRequests;
+	int failedRequests;
+	int unresolvedAtEnd;
+	int assignments;
+	int reassignments;
+	int conflictsPrevented;
+	long long totalMovementCost;
+	long long totalBatteryUsed;
+	long long totalResponseTime;
+	int maximumResponseTime;
+	long long routeSearches;     // work counters for the performance analysis
+	long long edgesRelaxed;
 
-    SimulationStatistics()
-        : completed_requests(0), failed_requests(0), unresolved_at_end(0), assignments(0),
-          reassignments(0), conflicts_prevented(0), total_movement_cost(0),
-          total_battery_used(0), total_response_time(0), maximum_response_time(0),
-          route_searches(0), edges_relaxed(0) {}
+	SimulationStatistics()
+		: completedRequests(0), failedRequests(0), unresolvedAtEnd(0), assignments(0),
+			reassignments(0), conflictsPrevented(0), totalMovementCost(0),
+				totalBatteryUsed(0), totalResponseTime(0), maximumResponseTime(0),
+					routeSearches(0), edgesRelaxed(0) {}
 };
 
 class SimulationController {
 private:
-    Environment environment;
-    DynamicArray<Robot> robots;
-    DynamicArray<RescueRequest> requests;
-    EventQueue event_queue;
-    SimulationSettings settings;
-    SimulationStatistics statistics;
-    Logger logger;
+	Environment environment;
+	DynamicArray<Robot> robots;
+	DynamicArray<RescueRequest> requests;
+	EventQueue eventQueue;
+	SimulationSettings settings;
+	SimulationStatistics statistics;
+	Logger logger;
 
-    int current_time;
-    bool initialized;
-    bool finished;
+	int currentTime;
+	bool initialized;
+	bool finished;
 
-    int find_robot_index(int robot_id) const;
-    int find_request_index(int request_id) const;
+	int findRobotIndex(int robotId) const;
+	int findRequestIndex(int requestId) const;
 
-    // --- the five pipeline stages (apply_due_events, apply_event, recheck_routes and
-    //     assign_pending_requests are TODO Member 3; release_due_requests and advance_robots are provided) ---
-    void apply_due_events();
-    bool apply_event(const Event& event);
-    void release_due_requests();
-    void recheck_routes();
-    void advance_robots();
-    void assign_pending_requests();
+	// --- the five pipeline stages (applyDueEvents, applyEvent, recheckRoutes and
+	//     assignPendingRequests are TODO Member 3; releaseDueRequests and advanceRobots are provided) ---
+	void applyDueEvents();
+	bool applyEvent(const Event& event);
+	void releaseDueRequests();
+	void recheckRoutes();
+	void advanceRobots();
+	void assignPendingRequests();
 
-    // --- the movement and dispatch logic (TODO, Member 3; search_route, search_nearest_station
-    //     and change_robot_state are provided) ---
-    void update_robot(Robot& robot);
-    // Moves up to `speed` units along robot.planned_route / the road it is on.
-    // Returns true if the robot is now at the END of its route (not on a road).
-    bool travel(Robot& robot);
-    // Robot is at a location with no task: choose AVAILABLE, or RETURNING to a station,
-    // or UNAVAILABLE (still on a road, or no station reachable).
-    void decide_after_task(Robot& robot);
-    // Request goes back to PENDING (work reset), robot released, then decide_after_task.
-    void interrupt_task(Robot& robot, const std::string& reason);
-    // Wrappers around Member 1's searches that also count work and log nothing.
-    PathResult search_route(int from_id, int to_id);
-    PathResult search_nearest_station(int from_id);
-    // set_state that logs the change, or logs REJECTED when the transition is illegal.
-    bool change_robot_state(Robot& robot, int new_state, const std::string& reason);
-    // True if some PENDING request is compatible with the robot but the robot is feasible for none.
-    bool blocked_by_battery_for_all_pending(const Robot& robot);
+	// --- the movement and dispatch logic (TODO, Member 3; searchRoute, searchNearestStation
+	//     and changeRobotState are provided) ---
+	void updateRobot(Robot& robot);
+	// Moves up to `speed` units along robot.planned_route / the road it is on.
+	// Returns true if the robot is now at the END of its route (not on a road).
+	bool travel(Robot& robot);
+	// Robot is at a location with no task: choose AVAILABLE, or RETURNING to a station,
+	// or UNAVAILABLE (still on a road, or no station reachable).
+	void decideAfterTask(Robot& robot);
+	// Request goes back to PENDING (work reset), robot released, then decideAfterTask.
+	void interruptTask(Robot& robot, const string& reason);
+	// Wrappers around Member 1's searches that also count work and log nothing.
+	PathResult searchRoute(int fromId, int toId);
+	PathResult searchNearestStation(int fromId);
+	// set_state that logs the change, or logs REJECTED when the transition is illegal.
+	bool changeRobotState(Robot& robot, int newState, const string& reason);
+	// True if some PENDING request is compatible with the robot but the robot is feasible for none.
+	bool batteryBlocksAllPending(const Robot& robot);
 
-    void fail_unresolved_requests();
-    void compute_final_statistics();
-    void write_statistics(std::ostream& out) const;
+	void failUnresolvedRequests();
+	void computeFinalStatistics();
+	void writeStatistics(ostream& out) const;
 
 public:
-    SimulationController();
+	SimulationController();
 
-    // Loads and validates the scenario, fills event_queue. (Already wired to Member 1's parser.)
-    bool load_scenario(const std::string& file_path);
+	// Loads and validates the scenario, fills eventQueue. (Already wired to Member 1's parser.)
+	bool loadScenario(const string& filePath);
 
-    // DONE (provided): run exactly one time step. False if not loaded or already finished.
-    bool step();
+	// DONE (provided): run exactly one time step. False if not loaded or already finished.
+	bool step();
 
-    // DONE (provided): call step() until finished.
-    void run();
+	// DONE (provided): call step() until finished.
+	void run();
 
-    // DONE (provided): print environment summary, robots, and requests grouped by state.
-    void print_status() const;
-    void print_final_statistics() const;
+	// DONE (provided): print environment summary, robots, and requests grouped by state.
+	void printStatus() const;
+	void printFinalStatistics() const;
 
-    // DONE (provided): save the log and a statistics file. False on I/O failure.
-    bool write_outputs(const std::string& log_path, const std::string& stats_path) const;
+	// DONE (provided): save the log and a statistics file. False on I/O failure.
+	bool writeOutputs(const string& logPath, const string& statsPath) const;
 
-    bool is_finished() const { return finished; }
-    int get_current_time() const { return current_time; }
-    const SimulationStatistics& get_statistics() const { return statistics; }
-    const DynamicArray<RescueRequest>& get_requests() const { return requests; }
-    const DynamicArray<Robot>& get_robots() const { return robots; }
-    const Logger& get_logger() const { return logger; }
+	bool isFinished() const { return finished; }
+	int getCurrentTime() const { return currentTime; }
+	const SimulationStatistics& getStatistics() const { return statistics; }
+	const DynamicArray<RescueRequest>& getRequests() const { return requests; }
+	const DynamicArray<Robot>& getRobots() const { return robots; }
+	const Logger& getLogger() const { return logger; }
 };
+
+#endif
