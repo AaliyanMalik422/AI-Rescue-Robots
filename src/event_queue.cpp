@@ -1,47 +1,76 @@
 #include "event_queue.hpp"
 
-// MEMBER 2: binary min-heap of events; "smaller" means Event::comes_before.
-// Same index arithmetic as MinHeap, but no position array is needed.
-
 EventQueue::EventQueue() {}
 
-void EventQueue::sift_up(int index) {
-    // TODO (Member 2)
-    // PSEUDOCODE: while index > 0: parent = (index-1)/2;
-    //   if heap[index].comes_before(heap[parent]): swap them; index = parent  else stop
-    (void)index;
+void EventQueue::sift_up(int idx) {
+
+    while (idx > 0) {
+
+        int parent = (idx - 1) / 2;
+        if (!heap[idx].comes_before(heap[parent])) 
+            break;
+
+        Event tmp= heap[idx];
+        heap[idx] = heap[parent];
+        heap[parent] = tmp;
+        idx = parent;
+    }
 }
 
-void EventQueue::sift_down(int index) {
-    // TODO (Member 2)
-    // PSEUDOCODE: loop: best = index; check left (2i+1) and right (2i+2) with comes_before;
-    //   if best == index stop; swap(index, best); index = best
-    (void)index;
+void EventQueue::sift_down(int idx) {
+
+    while (true) {
+        int left = 2 * idx + 1;
+        int right = 2 * idx + 2;
+        int best = idx;
+
+        if (left < heap.size() && heap[left].comes_before(heap[best]))
+            best = left;
+        if (right < heap.size() && heap[right].comes_before(heap[best])) 
+            best = right;
+        if (best == index)
+            break;
+
+        Event tmp = heap[idx];
+        heap[idx] = heap[best];
+        heap[best] = tmp;
+        idx = best;
+    }
 }
 
 bool EventQueue::push(const Event& event) {
-    // TODO (Member 2)
-    // PSEUDOCODE: if not heap.push_back(event): return false; sift_up(heap.size() - 1); return true
-    (void)event;
-    return false;
+
+    if (!heap.push_back(event)) 
+        return false;
+    sift_up(heap.size() - 1);
+    return true;
 }
 
 bool EventQueue::peek(Event& result) const {
-    // DONE (provided)
-    if (heap.empty()) return false;
+
+    if (heap.empty()) 
+        return false;
     result = heap[0];
     return true;
 }
 
 bool EventQueue::pop(Event& result) {
-    // TODO (Member 2)
-    // PSEUDOCODE: if empty: return false; result = heap[0];
-    //   heap[0] = heap[last]; heap.pop_back(); if not empty: sift_down(0); return true
-    (void)result;
-    return false;
+
+    if (heap.empty()) 
+        return false;
+
+    result = heap[0];
+
+    int last = heap.size() - 1;
+    heap[0] = heap[last];
+    heap.pop_back();
+
+    if (!heap.empty()) 
+        sift_down(0);
+
+    return true;
 }
 
 void EventQueue::clear() {
-    // DONE (provided)
     heap.clear();
 }
