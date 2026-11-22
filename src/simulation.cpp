@@ -683,16 +683,59 @@ bool SimulationController::travel(Robot& robot) {
 }
 
 void SimulationController::decideAfterTask(Robot& robot) {
-	// TODO (Member 3)
-	// PSEUDOCODE:
-	//   if robot.is_on_road(): changeRobotState(UNAVAILABLE); return
-	//   needCharge = battery_is_low(robot, 30) or batteryBlocksAllPending(robot)
-	//   if not needCharge: changeRobotState(AVAILABLE); return
-	//   r = searchNearestStation(robot.current_location_id)
-	//   if not r.exists: changeRobotState(UNAVAILABLE); return
-	//   robot.set_route(r.route, r.connection_ids); robot.return_station_id = last stop of the route
-	//   changeRobotState(RETURNING)       (a zero-length route means: already at a station)
-	(void)robot;
+	// A robot cannot start a new task while physically crossing a road.
+	if (robot.is_on_road()) {
+		changeRobotState(
+			robot,
+			ROBOT_UNAVAILABLE,
+			"still on road"
+		);
+		return;
+	}
+
+	// Charge if battery is low or cannot support any compatible pending request.
+	bool needCharge = battery_is_low(robot, 30) ||
+		batteryBlocksAllPending(robot);
+
+	if (!needCharge) {
+		changeRobotState(
+			robot,
+			ROBOT_AVAILABLE,
+			"ready for another task"
+		);
+		return;
+	}
+
+	// Find the nearest operational charging station.
+	PathResult stationRoute = searchNearestStation(robot.current_location_id);
+
+	if (!stationRoute.exists) {
+		changeRobotState(
+			robot,
+			ROBOT_UNAVAILABLE,
+			"no reachable charging station"
+		);
+		return;
+	}
+
+	// Store the route to the charging station.
+	if (!robot.set_route(stationRoute.route, stationRoute.connection_ids)) {
+		changeRobotState(
+			robot,
+			ROBOT_UNAVAILABLE,
+			"could not set charging route"
+		);
+		return;
+	}
+
+	robot.return_station_id =
+		stationRoute.route[stationRoute.route.size() - 1];
+
+	changeRobotState(
+		robot,
+		ROBOT_RETURNING,
+		"returning to charging station"
+	);
 }
 
 void SimulationController::interruptTask(Robot& robot, const string& reason) {
