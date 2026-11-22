@@ -696,13 +696,80 @@ void SimulationController::decideAfterTask(Robot& robot) {
 }
 
 void SimulationController::interruptTask(Robot& robot, const string& reason) {
-	// TODO (Member 3)
-	// PSEUDOCODE: i = findRequestIndex(robot.assigned_request_id)
-	//   if i != -1: requests[i].return_to_pending()  (resets work to full duration)
-	//               statistics.reassignments++; log INTERRUPT with reason and REQUEST_STATE
-	//   robot.release_request()
-	//   decideAfterTask(robot)
-	(void)robot; (void)reason;
+	int requestId = robot.assigned_request_id;
+	int requestIndex = -1;
+	int oldRequestState = -1;
+
+	// Find the request currently assigned to this robot.
+	if (requestId != -1) {
+		requestIndex = findRequestIndex(requestId);
+
+		// The assigned request must exist and belong to this robot.
+		if (requestIndex != -1) {
+			RescueRequest& request = requests[requestIndex];
+
+			if (request.assigned_robot_id == robot.id &&
+				(request.state == REQUEST_ASSIGNED ||
+					request.state == REQUEST_IN_PROGRESS)) {
+
+				oldRequestState = request.state;
+
+				// Return the interrupted request to PENDING.
+				if (!request.return_to_pending()) {
+					logger.log(
+						currentTime,
+						"REJECTED",
+						"robot=" + int_to_string(robot.id),
+						"could not release request;reason=" + reason
+					);
+					return;
+				}
+
+				statistics.reassignments++;
+
+				logger.log(
+					currentTime,
+					"REQUEST_STATE",
+					"request=" + int_to_string(requestId),
+					string(request_state_name(oldRequestState)) +
+					"->PENDING;INTERRUPTED"
+				);
+			}
+			else {
+				// Do not modify a request belonging to another robot.
+				logger.log(
+					currentTime,
+					"REJECTED",
+					"robot=" + int_to_string(robot.id),
+					"invalid request assignment;reason=" + reason
+				);
+			}
+		}
+		else {
+			// The robot refers to a request that no longer exists.
+			logger.log(
+				currentTime,
+				"REJECTED",
+				"robot=" + int_to_string(robot.id),
+				"assigned request not found;reason=" + reason
+			);
+		}
+	}
+
+	// Record the interruption.
+	string ids = "robot=" + int_to_string(robot.id);
+
+	if (requestId != -1) {
+		ids += ";request=" + int_to_string(requestId);
+	}
+
+	logger.log(currentTime, "INTERRUPT", ids, reason);
+
+	// Release the robot and clear its old route.
+	robot.release_request();
+
+	// Decide whether it should become available or recharge.
+	decideAfterTask(robot);
 }
 
 PathResult SimulationController::searchRoute(int fromId, int toId) {
