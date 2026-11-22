@@ -28,7 +28,7 @@ void EventQueue::sift_down(int idx) {
             best = left;
         if (right < heap.size() && heap[right].comes_before(heap[best])) 
             best = right;
-        if (best == index)
+        if (best == idx)
             break;
 
         Event tmp = heap[idx];
