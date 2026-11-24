@@ -36,25 +36,20 @@ bool Environment::add_connection(const Connection& connection) {
     int index = connections.size();
     if (!connections.push_back(connection)) return false;
 
-    if (!connection_lookup.insert(connection.id, index)) {
-        connections.pop_back();
-        return false;
-    }
-
     NeighborNode ab(b, index);
     NeighborNode ba(a, index);
     if (!graph[a].push_back(ab)) {
-        connection_lookup.clear();
-        for (int i = 0; i < connections.size(); ++i)
-            connection_lookup.insert(connections[i].id, i);
         connections.pop_back();
         return false;
     }
     if (!graph[b].push_back(ba)) {
         graph[a].pop_back();
-        connection_lookup.clear();
-        for (int i = 0; i < connections.size(); ++i)
-            connection_lookup.insert(connections[i].id, i);
+        connections.pop_back();
+        return false;
+    }
+    if (!connection_lookup.insert(connection.id, index)) {
+        graph[a].pop_back();
+        graph[b].pop_back();
         connections.pop_back();
         return false;
     }
