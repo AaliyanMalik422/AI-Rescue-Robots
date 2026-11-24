@@ -209,7 +209,7 @@ bool parse_scenario(const std::string& file_path,
         events.push_back(Event(event_type, time, target, event_value, i));
     }
 
-    if (!next_line(file, line) || line != "END") {
+    if (!next_line(file, line) || split_tokens(line, tokens, 8) != 1 || tokens[0] != "END") {
         error_message = "END record 1: missing END marker or incorrect section count";
         return false;
     }
