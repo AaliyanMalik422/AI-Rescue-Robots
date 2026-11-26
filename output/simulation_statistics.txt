@@ -1,0 +1,27 @@
+scenario: minimum_working_1
+steps_run: 250
+requests_total: 60
+requests_completed: 60
+requests_failed: 0
+requests_unresolved_at_end: 0
+average_response_time: 21.55
+maximum_response_time: 104
+total_movement_cost: 909
+total_battery_used: 1515
+assignments: 62
+reassignments: 2
+conflicts_prevented: 43
+route_searches: 283
+edges_relaxed: 60150
+robot 1: busy_steps=70 online_steps=250 utilisation_percent=28 battery_used=113
+robot 2: busy_steps=108 online_steps=210 utilisation_percent=51.4286 battery_used=141
+robot 3: busy_steps=100 online_steps=250 utilisation_percent=40 battery_used=151
+robot 4: busy_steps=94 online_steps=250 utilisation_percent=37.6 battery_used=122
+robot 5: busy_steps=76 online_steps=250 utilisation_percent=30.4 battery_used=98
+robot 6: busy_steps=62 online_steps=250 utilisation_percent=24.8 battery_used=86
+robot 7: busy_steps=62 online_steps=200 utilisation_percent=31 battery_used=78
+robot 8: busy_steps=88 online_steps=250 utilisation_percent=35.2 battery_used=120
+robot 9: busy_steps=83 online_steps=250 utilisation_percent=33.2 battery_used=116
+robot 10: busy_steps=127 online_steps=250 utilisation_percent=50.8 battery_used=166
+robot 11: busy_steps=118 online_steps=250 utilisation_percent=47.2 battery_used=157
+robot 12: busy_steps=116 online_steps=250 utilisation_percent=46.4 battery_used=167
