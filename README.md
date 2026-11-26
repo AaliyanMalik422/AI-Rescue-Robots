@@ -65,7 +65,7 @@ All scenarios are in `data/` and use the format below. No scenario extends the f
 | File | Locations | Connections | Robots | Requests | Steps | Purpose |
 | --- | --- | --- | --- | --- | --- | --- |
 | `scenario_provided.txt` | 56 | 117 | 12 | 60 | 250 | University reference (never edit it) |
-| `scenario_1_basic.txt` | 8 | 10 | 3 | 5 | 60 | Basic dispatch; one request is cut off and times out |
+| `scenario_1_basic.txt` | 8 | 10 | 3 | 5 | 60 | Basic dispatch; request 5 fails because its robot is on a road when that road is blocked, so it waits there until the time limit |
 | `scenario_2_blocked_routes.txt` | 8 | 11 | 3 | 5 | 70 | Blocked roads and rerouting |
 | `scenario_3_coordination.txt` | 10 | 15 | 4 | 8 | 100 | Several robots competing for requests |
 | `scenario_5_resource_management.txt` | 12 | 17 | 4 | 8 | 120 | Battery limits, charging, stations going down |
